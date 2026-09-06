@@ -1,194 +1,149 @@
-# Saas_sense
 # SAAS-SENSE
 
 ## AI-Powered Autonomous SaaS Subscription Waste Detection and Optimization Agent
 
-SAAS-SENSE is an AI-powered autonomous agent that helps organizations identify and reduce unnecessary SaaS subscription expenses.
-
-The system analyzes subscription usage, employee information, costs, contracts, renewal dates, and previous decisions. It then investigates potential waste and provides recommendations such as Retain, Review, Downgrade, Reclaim, or Cancel.
-
----
+SAAS-SENSE is an AI-powered autonomous agent that helps organizations identify unnecessary SaaS subscription expenses and recommend cost-saving actions.
 
 ## Problem Statement
 
-Organizations often spend money on SaaS licenses that are:
+Organizations often waste money on SaaS subscriptions because of:
 
-- Completely unused
-- Used very rarely
-- Assigned to employees who have left
-- More expensive than required
-- Duplicated across departments
-- Approaching renewal despite low usage
+- Unused licenses
+- Low-usage licenses
+- Licenses assigned to employees who have left
+- Expensive subscription plans
+- Duplicate subscriptions
+- Upcoming renewals with low usage
 
-Manually identifying these issues across multiple SaaS applications is time-consuming.
+Manually identifying these issues is time-consuming.
 
----
+## Objective
+
+The objectives of SAAS-SENSE are:
+
+1. Identify potentially wasted SaaS subscriptions.
+2. Analyze subscription usage.
+3. Calculate estimated financial waste.
+4. Analyze contract information.
+5. Identify upcoming renewals.
+6. Use previous decisions through persistent memory.
+7. Provide context-aware recommendations.
+8. Estimate potential savings.
 
 ## Proposed Solution
 
 SAAS-SENSE uses an LLM-based autonomous agent to investigate SaaS subscription waste.
 
-Instead of simply identifying low usage, the agent considers multiple factors before making a recommendation.
+The agent can:
 
-The agent can analyze:
-
-- Subscription usage
-- Monthly subscription cost
-- Employee and department
-- License plan
-- Contract information
-- Renewal dates
-- Previous investigation decisions
-
----
+User Question
+    ↓
+LLM
+    ↓
+Select Required Tools
+    ↓
+Analyze Subscription Data
+    ↓
+Check Usage
+    ↓
+Check Cost and Contract
+    ↓
+Check Renewal
+    ↓
+Check Previous Decisions
+    ↓
+Generate Recommendation
+    ↓
+Save Investigation to Memory
 
 ## Key Innovation
 
-The main innovation of SAAS-SENSE is **context-aware SaaS waste detection**.
-
 Low usage does not automatically mean that a subscription should be cancelled.
 
-The agent investigates the reason behind low usage and considers factors such as:
+The agent considers:
 
-- Employee role
+- Employee
 - Department
-- Plan
+- Usage
 - Cost
+- Plan
+- Features Used
 - Contract
-- Renewal date
-- Previous decisions
+- Renewal Date
+- Previous Decisions
 
-This allows the system to provide more meaningful recommendations instead of relying only on login counts.
-
----
+This provides context-aware recommendations.
 
 ## LLM Component
 
-The project uses **OpenAI GPT-5.6 Luna** as the Large Language Model.
+The LLM component is implemented in `agent.py`.
 
-The LLM is implemented in `agent.py`.
+Model:
+
+`OpenAI GPT-5.6 Luna`
 
 The LLM:
 
-1. Receives the user's question.
-2. Decides which tools are required.
-3. Calls the appropriate tools.
-4. Analyzes the returned information.
-5. Performs additional investigation when required.
-6. Generates the final recommendation.
-7. Saves the investigation to memory.
+- Understands the user's question
+- Selects appropriate tools
+- Analyzes tool results
+- Performs multi-step investigation
+- Generates recommendations
+- Provides confidence levels
+- Saves decisions to memory
 
----
+## ReAct Agent
 
-## Agent Workflow
+The project follows a ReAct-style workflow:
 
-The agent follows a ReAct-style workflow:
+Reason → Action → Observation → Reason → Action → Final Answer
 
-```text
-User Question
-      |
-      v
-     LLM
-      |
-      v
-Select Appropriate Tool
-      |
-      v
-Execute Tool
-      |
-      v
-Database / Memory
-      |
-      v
-Tool Result
-      |
-      v
-     LLM
-      |
-      v
-Further Investigation
-      |
-      v
-Final Recommendation
-      |
-      v
-Save Decision to Memory
-The basic process is:
+The agent can decide which tools to use based on the user's question.
 
-Reason -> Action -> Observation -> Reason -> Final Answer
+## Tools Used
 
-Tools Used
+SAAS-SENSE contains six custom tools:
 
-The agent contains six custom tools.
+| Tool | Purpose |
+|------|---------|
+| `subscription_search()` | Searches subscription information |
+| `analyze_usage()` | Analyzes SaaS usage |
+| `calculate_waste()` | Calculates estimated waste |
+| `renewal_analysis()` | Finds upcoming renewals |
+| `contract_analysis()` | Analyzes contract information |
+| `memory_search()` | Searches previous investigations |
 
-Tool	Purpose
-subscription_search()	Searches subscription information by application or department
-analyze_usage()	Analyzes license usage and login frequency
-calculate_waste()	Estimates monthly and annual subscription waste
-renewal_analysis()	Finds subscriptions approaching renewal
-contract_analysis()	Checks contract and licensing information
-memory_search()	Searches previous investigations and decisions
-Memory
+## Memory
 
-SAAS-SENSE uses persistent memory to remember previous investigations.
+SAAS-SENSE uses persistent memory stored in:
 
-The memory is stored in:
+`agent_memory.db`
 
-agent_memory.db
+The memory stores:
 
-The system stores:
+- Previous questions
+- Investigation details
+- Decisions
+- Timestamps
 
-Previous questions
-Investigation details
-Decisions
-Timestamps
+This allows the agent to use previous decisions during future investigations.
 
-This allows the agent to use previous decisions when analyzing similar subscriptions.
+## Database
 
-Database
-
-The project uses SQLite for storing SaaS information.
+The project uses SQLite.
 
 Main database:
 
-saas_data.db
+`saas_data.db`
 
-The database contains:
+Tables:
 
-subscriptions
-employees
-contracts
-Subscriptions
+- `subscriptions`
+- `employees`
+- `contracts`
 
-Stores information such as:
+## Project Structure
 
-Application
-Employee
-Department
-Plan
-Monthly cost
-Login frequency
-Features used
-Renewal date
-Owner
-Employees
-
-Stores:
-
-Employee name
-Department
-Employment status
-Contracts
-
-Stores:
-
-Application
-Plan
-Minimum licenses
-Renewal date
-Annual cost
-Cancellation notice period
-Project Structure
 saas_waste_agent/
 │
 ├── main.py
@@ -201,200 +156,310 @@ saas_waste_agent/
 │
 ├── saas_data.db
 └── agent_memory.db
-File Description
-File	Description
-main.py	Main application and user interface
-agent.py	LLM, agent logic, tool calling and ReAct loop
-tools.py	Custom SaaS analysis tools
-memory.py	Persistent agent memory
-database.py	Database creation and sample data
-requirements.txt	Required Python packages
-.env	Stores the OpenAI API key
-Technologies Used
-Python
-OpenAI GPT-5.6 Luna
-OpenAI Responses API
-Function Calling
-ReAct Agent Architecture
-SQLite
-Python-dotenv
-Installation
-1. Open the Project
 
-Open the project folder in VS Code or another Python IDE.
+## File Description
 
-2. Install Dependencies
-pip install -r requirements.txt
-3. Configure the API Key
+| File | Description |
+|------|-------------|
+| `main.py` | Main application and user interface |
+| `agent.py` | LLM integration, agent logic and ReAct loop |
+| `tools.py` | Six custom SaaS analysis tools |
+| `memory.py` | Persistent agent memory |
+| `database.py` | SQLite database and sample data |
+| `requirements.txt` | Required Python packages |
+| `.env` | Stores the OpenAI API key |
 
-Create a .env file in the project folder:
+## Technologies Used
 
-OPENAI_API_KEY=your_actual_api_key
+- Python
+- OpenAI GPT-5.6 Luna
+- OpenAI Responses API
+- Function Calling
+- ReAct Agent Architecture
+- SQLite
+- Python-dotenv
+- Agentic AI
+- Persistent Memory
 
-Do not share your API key or upload it to GitHub.
+## Requirements
 
-4. Initialize the Database
+- Python 3.10+
+- OpenAI API Key
+
+Required packages:
+
+openai
+python-dotenv
+
+## Installation
+
+### 1. Open the Project
+
+Open the project folder in VS Code.
+
+### 2. Open Terminal
 
 Run:
 
-python database.py
+`cd saas_waste_agent`
+
+### 3. Install Dependencies
+
+Run:
+
+`pip install -r requirements.txt`
+
+## API Key Configuration
+
+Create a `.env` file in the project directory.
+
+Add:
+
+`OPENAI_API_KEY=your_actual_api_key`
+
+Do not share your API key or upload it to GitHub.
+
+Add `.env` to `.gitignore`.
+
+## Initialize Database
+
+Run:
+
+`python database.py`
 
 This creates and populates the SQLite database.
 
-5. Run the Application
-python main.py
-Example Questions
+## Run the Project
 
-After starting the application, you can ask questions such as:
+Run:
+
+`python main.py`
+
+The application will display:
+
+SAAS-SENSE
+Autonomous SaaS Optimization Agent
+
+Ask a question about your SaaS subscriptions.
+
+## Example Questions
 
 Which subscriptions have the highest waste?
+
 Which licenses are completely unused?
+
 Show me all subscriptions with low usage.
+
 How much money is being wasted every month?
+
 How much money could the company save annually?
+
 Which subscriptions are renewing within 30 days?
+
 Which subscriptions should we review before renewal?
+
+Find upcoming renewals and estimate potential savings.
+
 Analyze all SaaS subscriptions and identify the biggest sources of waste.
-Find unused licenses and check their contract information before recommending action.
-Example Agent Output
-------------------------------------------------------------------------
-SAAS-SENSE ANALYSIS
-------------------------------------------------------------------------
 
-FINDING
-A potentially wasteful SaaS subscription was identified.
+## Recommendation Types
 
-EVIDENCE
-• Monthly usage is very low.
-• The subscription has an active paid plan.
-• The subscription has an upcoming renewal.
-• Contract information was reviewed.
+The agent can recommend:
 
-RECOMMENDATION
-Review the subscription for downgrade, reassignment, or cancellation.
+### RETAIN
 
-ESTIMATED SAVINGS
-Monthly: Calculated based on subscription cost
-Annual: Calculated based on estimated monthly savings
+The subscription is actively required.
 
-CONFIDENCE
-Medium - recommendation is based on usage and contract evidence.
+### REVIEW
 
-------------------------------------------------------------------------
-Autonomous Agent
+More investigation or human approval is required.
 
-SAAS-SENSE is autonomous because the user does not need to manually select every analysis step.
+### DOWNGRADE
 
-For example:
+A cheaper plan may be sufficient.
 
-User:
-"Find the biggest sources of SaaS waste."
+### RECLAIM
 
-        ↓
+The license may be reassigned or recovered.
 
-Agent decides to:
+### CANCEL
 
-Search subscriptions
-        ↓
-Analyze usage
-        ↓
-Calculate waste
-        ↓
-Check contracts
-        ↓
-Check renewals
-        ↓
-Search previous decisions
-        ↓
-Generate recommendation
+The subscription appears unnecessary based on the available evidence.
 
-The agent decides which tools are useful based on the question.
-
-The current version is an autonomous decision-support system. It does not automatically cancel subscriptions. Human approval can be required for high-impact actions.
-
-Sample Waste Categories
-
-SAAS-SENSE can identify:
-
-Unused licenses
-Low-usage licenses
-Very-low-usage licenses
-Potentially expensive waste
-Orphaned subscriptions
-Upcoming renewal risks
-Possible downgrade opportunities
-Potential license reclamation opportunities
-Security
-API keys are stored in .env.
-API keys are not hard-coded in the source code.
-Sensitive organizational data should be protected.
-High-impact actions should require human approval.
 The current prototype does not automatically cancel subscriptions.
-Limitations
 
-The current prototype uses:
+## Waste Detection
 
-Sample SQLite data
-Rule-based waste estimation
-Simulated SaaS subscription information
-No direct SaaS provider integrations
-No automatic subscription cancellation
-Future Enhancements
+The prototype estimates waste based on monthly login activity.
 
-Future versions can include:
+0 logins:
 
-Real-time SaaS API integrations
-HR system integration
-Finance and procurement integration
-Email and approval automation
-Web dashboard
-Real-time usage monitoring
-Advanced vector-based memory
-Human-in-the-loop approval workflow
-Automatic license reclamation
-SaaS vendor comparison and consolidation
-Project Architecture
-                  +----------------+
-                  |     USER       |
-                  +-------+--------+
-                          |
-                          v
-                  +----------------+
-                  |    main.py     |
-                  +-------+--------+
-                          |
-                          v
-                  +----------------+
-                  |    agent.py    |
-                  |   LLM + ReAct  |
-                  +-------+--------+
-                          |
-             +------------+------------+
-             |            |            |
-             v            v            v
-        +---------+  +---------+  +---------+
-        | Tools   |  | Memory  |  |  LLM    |
-        |tools.py |  |memory.py|  | OpenAI  |
-        +----+----+  +----+----+  +---------+
-             |            |
-             v            v
-        +---------+  +-------------+
-        | SQLite  |  | Agent       |
-        | Database|  | Memory DB   |
-        +---------+  +-------------+
-             |
-             v
-      +----------------+
-      | Recommendation |
-      +----------------+
-Expected Benefits
+UNUSED
+
+1-3 logins:
+
+VERY_LOW_USAGE
+
+4-10 logins:
+
+LOW_USAGE
+
+More than 10 logins:
+
+NORMAL_USAGE
+
+These are prototype estimation rules and can be replaced with organization-specific policies.
+
+## Example Use Case
+
+Suppose Rahul has an Adobe Creative Cloud Enterprise subscription.
+
+Employee: Rahul
+Application: Adobe Creative Cloud
+Plan: Enterprise
+Monthly Cost: ₹3500
+Monthly Logins: 2
+
+The agent does not immediately recommend cancellation.
+
+It investigates:
+
+Usage
+    ↓
+Employee
+    ↓
+Department
+    ↓
+Features Used
+    ↓
+Contract
+    ↓
+Renewal
+    ↓
+Previous Decisions
+
+It may then recommend:
+
+REVIEW
+
+This demonstrates context-aware decision making.
+
+## Agent Architecture
+
+User
+ ↓
+main.py
+ ↓
+agent.py
+ ↓
+OpenAI LLM
+ ↓
+Tool Selection
+ ↓
+tools.py
+ ↓
+SQLite Database
+ ↓
+Tool Results
+ ↓
+LLM Analysis
+ ↓
+Final Recommendation
+ ↓
+memory.py
+ ↓
+agent_memory.db
+
+## Why LLM?
+
+The LLM provides:
+
+- Natural language understanding
+- Dynamic tool selection
+- Multi-step reasoning
+- Context understanding
+- Evidence-based recommendations
+- Explainable results
+- Memory-based reasoning
+
+## Why Agentic AI?
+
+The system follows:
+
+Observe → Decide → Act → Observe Again → Remember
+
+The agent can independently decide which tools are required instead of requiring the user to manually perform every step.
+
+## Security
+
+- API keys are stored in `.env`.
+- API keys are not hard-coded.
+- `.env` should not be uploaded to GitHub.
+- Organizational data should be protected.
+- High-impact actions should require human approval.
+- The current prototype does not automatically cancel subscriptions.
+
+## Limitations
+
+The current prototype:
+
+1. Uses sample SaaS data.
+2. Uses SQLite.
+3. Uses rule-based waste estimation.
+4. Does not directly connect to SaaS provider APIs.
+5. Does not automatically cancel subscriptions.
+6. Does not integrate with HR systems.
+7. Does not integrate with finance systems.
+8. Uses simple text-based memory search.
+
+## Future Enhancements
+
+- Real-time SaaS API integration
+- HR system integration
+- Finance and procurement integration
+- Email and approval automation
+- Web dashboard
+- Real-time usage monitoring
+- Vector-based memory
+- Semantic search
+- Human-in-the-loop approval
+- Automatic license reclamation
+
+## Benefits
 
 SAAS-SENSE can help organizations:
 
-Reduce unnecessary SaaS spending
-Identify unused licenses
-Improve license utilization
-Detect renewal risks
-Support better procurement decisions
-Provide explainable recommendations
-Reduce manual SaaS auditing effort
+- Reduce unnecessary SaaS spending
+- Identify unused licenses
+- Improve license utilization
+- Detect renewal risks
+- Identify downgrade opportunities
+- Support procurement decisions
+- Reduce manual auditing effort
+- Maintain historical decisions
+- Provide explainable recommendations
+
+## Conclusion
+
+SAAS-SENSE is an autonomous AI agent that investigates SaaS subscription usage, costs, contracts, renewals, and previous decisions to identify potential waste and recommend cost-saving actions.
+
+The project demonstrates the practical application of:
+
+- Large Language Models
+- Agentic AI
+- ReAct
+- Function Calling
+- Custom Tools
+- Database Integration
+- Persistent Memory
+- Context-Aware Decision Making
+
+## License
+
+This project is developed for educational and academic purposes.
+
+## Project Name
+
+SAAS-SENSE
+
+AI-Powered Autonomous SaaS Subscription Waste Detection and Optimization Agent
