@@ -1,7 +1,10 @@
+
 import json
 import os
+
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from tools import (
     subscription_search,
@@ -9,242 +12,303 @@ from tools import (
     calculate_waste,
     renewal_analysis,
     contract_analysis,
-    memory_search
+    memory_search,
 )
 from memory import save_memory
 
+
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    raise ValueError("OPENAI_API_KEY is not set. Check your .env file.")
+    raise ValueError(
+        "GEMINI_API_KEY is not set. Check your .env file."
+    )
 
-client = OpenAI(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
-MODEL = "gpt-5.6-luna"
+MODEL = "gemini-3.5-flash-lite"
 
+
+# Instructions for the AI agent
 SYSTEM_PROMPT = """
-You are SaaS-Sense, an autonomous SaaS subscription optimization agent.
+You are SAAS-SENSE, an autonomous SaaS subscription
+optimization agent.
 
-Investigate SaaS subscriptions using the available tools and identify:
-unused licenses, low usage, expensive subscriptions, orphaned licenses,
-duplicate subscriptions, upcoming renewals, downgrade opportunities,
-consolidation opportunities and potential savings.
+Investigate subscriptions and identify:
+- Unused and low-usage licenses
+- Expensive subscriptions
+- Orphaned employee licenses
+- Duplicate subscriptions
+- Upcoming renewals
+- Downgrade and consolidation opportunities
+- Potential savings
 
-Use the ReAct approach internally:
-Reason -> Action -> Observation -> Reason -> Action -> Final Answer.
+Use tools to gather evidence before making recommendations.
+Never invent database information.
+Low usage alone does not prove a subscription should be cancelled.
+Consider employee status, department, usage, cost, plan,
+contract, renewal date, and previous decisions.
+Never actually cancel a subscription.
 
-Never invent database information. Use tools whenever required.
-
-Do not recommend cancellation only because usage is low. Consider usage,
-employee, department, plan, cost, contract, renewal date and previous decisions.
-
-Return a professional business report using exactly this structure:
+Return a report using exactly this structure:
 
 FINDING
 Brief summary of the important findings.
 
 EVIDENCE
-Bullet points containing relevant data from the tools.
+Bullet points containing relevant evidence.
 
 RECOMMENDATION
-Specific action such as Retain, Review, Downgrade, Reclaim or Cancel.
+Choose Retain, Review, Downgrade, Reclaim, or Cancel.
+Explain the reason.
 
 ESTIMATED SAVINGS
-Give monthly and annual savings when they can be calculated.
+Give monthly and annual estimates when available.
+Label savings as estimates.
 
 CONFIDENCE
-High, Medium or Low, with one short reason.
+High, Medium, or Low, with a short reason.
 
-Keep the response concise and professional.
+Keep the report concise and professional.
 """
 
-TOOLS = [
+
+# Gemini function declarations
+FUNCTION_DECLARATIONS = [
     {
-        "type": "function",
         "name": "subscription_search",
-        "description": "Search SaaS subscriptions by application or department.",
+        "description": "Search subscriptions by application or department.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "application": {
-                    "type": ["string", "null"]
+                    "type": "STRING",
+                    "description": "Application name, or null for all applications.",
+                    "nullable": True,
                 },
                 "department": {
-                    "type": ["string", "null"]
-                }
+                    "type": "STRING",
+                    "description": "Department name, or null for all departments.",
+                    "nullable": True,
+                },
             },
-            "required": ["application", "department"]
-        }
+            "required": ["application", "department"],
+        },
     },
     {
-        "type": "function",
         "name": "analyze_usage",
         "description": "Analyze SaaS license usage.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "application": {
-                    "type": ["string", "null"]
+                    "type": "STRING",
+                    "description": "Application name, or null for all applications.",
+                    "nullable": True,
                 },
                 "min_logins": {
-                    "type": "integer"
-                }
+                    "type": "INTEGER",
+                    "description": "Minimum login threshold; normally 5.",
+                },
             },
-            "required": ["application", "min_logins"]
-        }
+            "required": ["application", "min_logins"],
+        },
     },
     {
-        "type": "function",
         "name": "calculate_waste",
-        "description": "Calculate estimated SaaS waste and savings.",
+        "description": "Estimate monthly and annual SaaS waste.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "application": {
-                    "type": ["string", "null"]
-                }
+                    "type": "STRING",
+                    "description": "Application name, or null for all applications.",
+                    "nullable": True,
+                },
             },
-            "required": ["application"]
-        }
+            "required": ["application"],
+        },
     },
     {
-        "type": "function",
         "name": "renewal_analysis",
         "description": "Find subscriptions renewing within a specified number of days.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "days": {
-                    "type": "integer"
-                }
+                    "type": "INTEGER",
+                    "description": "Number of days to look ahead.",
+                },
             },
-            "required": ["days"]
-        }
+            "required": ["days"],
+        },
     },
     {
-        "type": "function",
         "name": "contract_analysis",
-        "description": "Analyze SaaS contract information.",
+        "description": "Retrieve SaaS contract information.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "application": {
-                    "type": ["string", "null"]
-                }
+                    "type": "STRING",
+                    "description": "Application name, or null for all applications.",
+                    "nullable": True,
+                },
             },
-            "required": ["application"]
-        }
+            "required": ["application"],
+        },
     },
     {
-        "type": "function",
         "name": "memory_search",
-        "description": "Search previous SaaS investigations.",
+        "description": "Search previous subscription investigations.",
         "parameters": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
                 "query": {
-                    "type": "string"
-                }
+                    "type": "STRING",
+                    "description": "Keywords for the previous investigation.",
+                },
             },
-            "required": ["query"]
-        }
-    }
+            "required": ["query"],
+        },
+    },
 ]
 
+GEMINI_TOOLS = [
+    types.Tool(
+        function_declarations=[
+            types.FunctionDeclaration.model_validate(item)
+            for item in FUNCTION_DECLARATIONS
+        ]
+    )
+]
+
+
+# Execute a tool requested by Gemini
 def execute_tool(name, arguments):
     if name == "subscription_search":
         return subscription_search(
             arguments.get("application"),
-            arguments.get("department")
+            arguments.get("department"),
         )
 
     if name == "analyze_usage":
         return analyze_usage(
             arguments.get("application"),
-            arguments.get("min_logins", 5)
+            arguments.get("min_logins", 5),
         )
 
     if name == "calculate_waste":
         return calculate_waste(
-            arguments.get("application")
+            arguments.get("application"),
         )
 
     if name == "renewal_analysis":
         return renewal_analysis(
-            arguments.get("days", 30)
+            arguments.get("days", 30),
         )
 
     if name == "contract_analysis":
         return contract_analysis(
-            arguments.get("application")
+            arguments.get("application"),
         )
 
     if name == "memory_search":
         return memory_search(
-            arguments.get("query", "")
+            arguments.get("query", ""),
         )
 
-    return {"error": "Unknown tool"}
+    return {"error": f"Unknown tool: {name}"}
 
+
+# Main autonomous agent loop
 def run_agent(question):
-    messages = [
-        {
-            "role": "user",
-            "content": question
-        }
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=question)],
+        )
     ]
 
     investigation_log = []
 
-    for _ in range(10):
-        response = client.responses.create(
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=GEMINI_TOOLS,
+        automatic_function_calling=(
+            types.AutomaticFunctionCallingConfig(disable=True)
+        ),
+        temperature=0.2,
+    )
+
+    # Allow up to 10 investigation rounds
+    for step in range(10):
+        response = client.models.generate_content(
             model=MODEL,
-            instructions=SYSTEM_PROMPT,
-            tools=TOOLS,
-            input=messages
+            contents=contents,
+            config=config,
         )
 
-        tool_calls = [
-            item for item in response.output
-            if item.type == "function_call"
-        ]
+        if not response.candidates:
+            return "Gemini returned no response. Please try again."
 
-        if not tool_calls:
-            answer = response.output_text
+        candidate = response.candidates[0]
 
-            save_memory(
-                question,
-                json.dumps(investigation_log, default=str),
-                answer
-            )
+        if candidate.content is None:
+            return "Gemini returned no response content."
+
+        function_calls = response.function_calls or []
+
+        # No function calls means the agent has its final answer
+        if not function_calls:
+            answer = response.text or "No text response was returned."
+
+            try:
+                save_memory(
+                    question,
+                    json.dumps(investigation_log, default=str),
+                    answer,
+                )
+            except Exception as exc:
+                print(f"Warning: Could not save memory: {exc}")
 
             return answer
 
-        messages += response.output
+        # Preserve the model's function-call response
+        contents.append(candidate.content)
 
-        for tool_call in tool_calls:
+        # Run each requested tool and return its result
+        for call in function_calls:
+            name = call.name
+            arguments = dict(call.args or {})
+
             try:
-                arguments = json.loads(tool_call.arguments)
-            except Exception:
-                arguments = {}
-
-            result = execute_tool(
-                tool_call.name,
-                arguments
-            )
+                result = execute_tool(name, arguments)
+            except Exception as exc:
+                result = {"error": f"{name} failed: {exc}"}
 
             investigation_log.append({
-                "tool": tool_call.name,
+                "step": step + 1,
+                "tool": name,
                 "arguments": arguments,
-                "result": result
+                "result": result,
             })
 
-            messages.append({
-                "type": "function_call_output",
-                "call_id": tool_call.call_id,
-                "output": json.dumps(result, default=str)
-            })
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_function_response(
+                            name=name,
+                            response={"result": result},
+                        )
+                    ],
+                )
+            )
 
-    return "Unable to complete the investigation."
+    return (
+        "Unable to complete the investigation after 10 rounds. "
+        "Please ask a more specific question."
+    )
